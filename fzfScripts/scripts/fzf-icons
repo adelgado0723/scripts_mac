@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#
+# Script name: dm-icons
+# Description: select icon and copy it to the clipboard
+# Dependencies: dmenu, python3, awk, xclip, notify-send, curl, xdotool
+# GitLab:
+
+
+# Set with the flags "-e", "-u","-o pipefail" cause the script to fail
+# if certain things happen, which is a good thing.  Otherwise, we can
+# get hidden bugs that are hard to discover.
+
+set -euo pipefail
+
+_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd "$(dirname "$(readlink "${BASH_SOURCE[0]}" || echo ".")")" && pwd)"
+
+echo "helper path = ${_path}"
+echo "BASH_SOURCE[0] = ${BASH_SOURCE[0]}"
+
+if [[  -f "${_path}/_fzf-helper.sh" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "${_path}/_fzf-helper.sh"
+else
+  # shellcheck disable=SC1090
+  echo "No helper-script found"
+fi
+
+# script will not hit this if there is no config-file to load
+# shellcheck disable=SC1090
+source "$(get_config)"
+
+main() {
+glyphlist='/usr/local/lib/glyphlist'
+font_family='"Fantasque Sans Mono"'
+font_size="25"
+# Get user selection via fzf from emoji file.
+if [ -e $glyphlist ]
+then
+    chosen=$(cut -d ';' -f1 $glyphlist | fzf --layout=reverse-list --border=sharp | sed "s/ .*//")
+else
+    echo -en "$(sudo curl https://www.nerdfonts.com/cheat-sheet \
+        | grep 'class="class-name">' \
+        | sed 's/ *<div class="class-name">//; s/<\/div><div class="codepoint">/ \\u/; s/<\/div>//; s/\(.* \)\(.*\)/\2 \1/' \
+        )" > $glyphlist
+    chosen=$(cut -d ';' -f1 $glyphlist | fzf --layout=reverse-list --border=sharp | sed "s/ .*//")
+fi
+
+# Exit if none chosen.
+[ -z "$chosen" ] && exit
+
+# If you run this command with an argument, it will automatically insert the
+# character. Otherwise, show a message that the emoji has been copied.
+if [ -n "${1-}" ]; then
+	xdotool type "$chosen"
+else
+	echo "$chosen" | pbcopy
+  osascript -e 'display notification "'"$chosen"' copied to clipboard" with title "fzf-icons"' 
+fi
+}
+
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"

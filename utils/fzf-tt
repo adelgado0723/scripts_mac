@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#
+if [[ $# -eq 1 ]]; then
+    selected=$1
+else
+    selected=`find -L /home/adelg/tt -type f | /usr/bin/fzf`
+    echo $selected
+fi
+
+if [[ -z $selected ]]; then
+    exit 0
+fi
+
+tmux neww /bin/bash -c "cat $selected | /usr/local/bin/tt"
+#

@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+#
+# Script name: dm-emoji
+# Description: select emoji and copy it to clipboard
+# Dependencies: dmenu, python3, awk, xclip, notify-send
+# GitLab:
+
+
+# Set with the flags "-e", "-u","-o pipefail" cause the script to fail
+# if certain things happen, which is a good thing.  Otherwise, we can
+# get hidden bugs that are hard to discover.
+
+set -euo pipefail
+_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd "$(dirname "$(readlink "${BASH_SOURCE[0]}" || echo ".")")" && pwd)"
+if [[  -f "${_path}/_dm-helper.sh" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "${_path}/_dm-helper.sh"
+else
+  # shellcheck disable=SC1090
+  echo "No helper-script found"
+fi
+
+# script will not hit this if there is no config-file to load
+# shellcheck disable=SC1090
+source "$(get_config)"
+
+main() {
+#
+# Path to emojiget.py
+# If it is in current working directory or in same folder as emojipick,
+# then the path of emojiget can be just its filename.
+emojiget='/usr/lib/emojiget.py'
+
+# Name-Size
+font_family='"Noto Color Emoji"'
+font_size="18"
+
+# Path to personal emojis file to display them at top of the dmenu list.
+favorites=~/.myemojis
+
+# 1=Yes, 0=No
+use_rofi=0
+copy_to_clipboard=1
+show_notification=1
+print_emoji=1
+lower_case=1
+enable_favorites=1
+
+if [[ "$use_rofi" -eq 1 ]]
+then
+    dmenu_app='rofi -dmenu -l 15 -font'
+    font="$font_family $font_size"
+else
+    dmenu_app='dmenu -l 15 -fn'
+    font="$font_family-$font_size"
+fi
+
+emoptions=""
+if [[ "$lower_case" -eq 1 ]]
+then
+    emoptions="$emoptions --lower-case"
+fi
+
+if [[ "$enable_favorites" -eq 1 ]]
+then
+    emoptions="$emoptions --input $favorites"
+fi
+
+file_check_program=/tmp/emojipick_check_program
+if [ ! -f "$file_check_program" ]; then
+    function check_program {
+        if ! command -v "$1" &> /dev/null
+        then
+            echo "$1 could not be found"
+            rm -f -I "$file_check_program"
+            exit
+        fi
+    }
+    check_program "$emojiget"
+    check_program python3
+    check_program awk
+    check_program xclip
+    check_program notify-send
+    if [[ "$use_rofi" -eq 1 ]]
+    then
+        check_program rofi
+    else
+        check_program dmenu
+    fi
+    touch "$file_check_program"
+fi
+
+emoji=$("$emojiget" $emoptions | $dmenu_app "$font" | tr '\n' ' ' | awk '{print $1}')
+
+if [ ! -z "$emoji" ]
+then
+
+    if [[ "$copy_to_clipboard" -eq 1 ]]; then
+        echo -n "$emoji" | xclip -rmlastnl -selection clipboard
+    fi
+
+    if [[ "$show_notification" -eq 1 ]]; then
+        notify-send --urgency=low "$emoji"
+    fi
+
+    if [[ "$print_emoji" -eq 1 ]]; then
+        echo "$emoji"
+    fi
+
+fi
+}
+
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"

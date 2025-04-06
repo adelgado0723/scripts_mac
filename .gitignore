@@ -1,0 +1,48 @@
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+*.env
+secrets.sh
+credentials.sh
+config.local.sh
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Local configuration
+config.local
+*.local
+local.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# IDE specific files
+.idea/
+.vscode/
+*.code-workspace
+
+# Build and package directories
+dist/
+build/
+node_modules/
+vendor/
+
+# Backup files
+*.bak
+*.backup
+*_backup
+
+wallpaper_rotation.txt

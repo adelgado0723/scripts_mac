@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+#!/usr/bin/env bash
+#
+# Script name: dm-tmux-sessionizer
+# Description: open a tmux session in a commonly visited directory
+# Dependencies: dmenu, tmux
+# GitLab: https://github.com/adelgado0723/dmscripts
+# Contributors: Derek Taylor, Andy Delgado
+
+# Set with the flags "-e", "-u","-o pipefail" cause the script to fail
+# if certain things happen, which is a good thing.  Otherwise, we can
+# get hidden bugs that are hard to discover.
+
+set -euo pipefail
+_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd "$(dirname "$(readlink "${BASH_SOURCE[0]}" || echo ".")")" && pwd)"
+if [[  -f "${_path}/_dm-helper.sh" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "${_path}/_dm-helper.sh"
+else
+  # shellcheck disable=SC1090
+  echo "No helper-script found"
+fi
+
+
+# script will not hit this if there is no config-file to load
+# shellcheck disable=SC1090
+source "$(get_config)"
+
+main() {
+
+    if [[ $# -eq 1 ]]; then
+        selected=$1
+    else
+        # These paths should be moved into configuration 
+        selected=$(find -L /home/adelg/dev/ /home/adelg/Downloads/ /home/adelg/.config/ /home/adelg/ /home/  -mindepth 1 -maxdepth 1 -type d | sort | dmenu)
+    fi
+    
+    if [[ -z $selected ]]; then
+        exit 0
+    fi
+    
+    selected_name=$(basename "$selected" | tr . _)
+    tmux_running=$(pgrep tmux)
+    
+    if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
+        echo "Trying to start new session"
+        echo "selected_name $selected_name"
+        echo "selected $selected"
+        tmux new-session -s $selected_name -c $selected
+        exit 0
+    fi
+    
+    if ! tmux has-session -t=$selected_name 2> /dev/null; then
+        tmux new-session -ds $selected_name -c $selected
+    fi
+    
+    tmux switch-client -t $selected_name
+
+}
+
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main 

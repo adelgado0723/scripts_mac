@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#
+## faster key repeat
+xset r rate 200 25
+
+# Remap Caps Lock and Esc
+setxkbmap -option caps:escape
+

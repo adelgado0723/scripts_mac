@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#
+# Script name: docker-rm
+# Description: Search for a docker container and remove it.
+# Dependencies: fzf, docker
+# Contributors: Andy Delgado
+
+set -euo pipefail
+
+main() {
+    docker rm -f $(docker ps -a | awk 'NR>1{print}' | gum filter --no-limit --prompt="choose container to remove:" | awk '{print $1}')
+}
+
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main 

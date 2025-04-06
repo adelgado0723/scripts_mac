@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#
+# Script name: docker-kill
+# Description: Search for a running docker container to kill.
+# Dependencies: fzf, docker
+# Contributors: Andy Delgado
+
+set -euo pipefail
+
+main() {
+    docker ps | awk 'NR>1{print}' |  gum filter --no-limit --prompt="choose container to stop:" | awk '{system("docker stop " $1 " &" )}'
+}
+
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main 

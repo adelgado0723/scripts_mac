@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+#
+# Script name: fzf-logout
+# Description: Logout, shutdown, reboot or lock screen.
+# Dependencies: fzf, systemd, custom `lock` command, notify-send
+# GitLab:
+# License:
+# Contributors: Andres Delgado
+
+
+# Set with the flags "-e", "-u","-o pipefail" cause the script to fail
+# if certain things happen, which is a good thing.  Otherwise, we can
+# get hidden bugs that are hard to discover.
+set -euo pipefail
+
+_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd "$(dirname "$(readlink "${BASH_SOURCE[0]}" || echo ".")")" && pwd)"
+
+echo "helper path = ${_path}"
+echo "BASH_SOURCE[0] = ${BASH_SOURCE[0]}"
+
+if [[  -f "${_path}/_fzf-helper.sh" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "${_path}/_fzf-helper.sh"
+else
+  # shellcheck disable=SC1090
+  echo "No helper-script found"
+fi
+
+# script will not hit this if there is no config-file to load
+# shellcheck disable=SC1090
+source "$(get_config)"
+
+# use notify-send if run in dumb term
+# TODO: add abillity to control from config.
+output(){
+  osascript -e 'display notification "'"$@"'" with title "fzf-logout"' 
+}
+
+main() {
+    # An array of options to choose.
+
+    # look up what managers are used (makes it more dynamic)
+    # declare -a MANAGERS
+    # while IFS= read -r manager
+    # do
+    #     MANAGERS+=("${manager,,}")
+    # done < <(grep-desktop)
+    # Original code, used as a refrence and as backup
+    # done < <(grep 'Name=' /usr/share/xsessions/*.desktop | cut -d'=' -f2)
+
+    # Piping the above array into fzf.
+    # We use "printf '%s\n'" to format the array one item to a line.
+
+    choice=$(printf %s 'Lock-Screen Logout Reboot Shutdown Suspend Quit' | tr ' ' '\n' | ${FZF}"Shutdown menu:")
+
+    # What to do when/if we choose one of the options.
+    case $choice in
+        'Logout')
+            if [[ "$(printf %s 'No Yes' | tr ' ' '\n' | ${FZF}"${choice}?")" == "Yes" ]]; then
+                osascript -e 'tell app "loginwindow" to  «event aevtrlgo»'
+            else
+                output "User chose not to logout." && exit 1
+            fi
+            ;;
+        'Lock-Screen')
+            pmset displaysleepnow
+            ;;
+        'Reboot')
+            if [[ "$(printf %s 'No Yes' | tr ' ' '\n' | ${FZF}"${choice}?")" == "Yes" ]]; then
+                osascript -e 'tell app "System Events" to restart'
+                
+            else
+                output "User chose not to reboot." && exit 0
+            fi
+            ;;
+        'Shutdown')
+            if [[ "$(printf %s 'No Yes' | tr ' ' '\n' | ${FZF}"${choice}?")" == "Yes" ]]; then
+                osascript -e 'tell app "System Events" to shut down'
+            else
+                output "User chose not to shutdown." && exit 0
+            fi
+            ;;
+        'Suspend')
+            if [[ "$(printf %s 'No Yes' | tr ' ' '\n' | ${FZF}"${choice}?")" == "Yes" ]]; then
+                osascript -e 'tell app "System Events" to sleep'
+            else
+                output "User chose not to suspend." && exit 0
+            fi
+            ;;
+        'Quit')
+            output "Program terminated." && exit 0
+        ;;
+        # It is a common practice to use the wildcard asterisk symbol (*) as a final
+        # pattern to define the default case. This pattern will always match.
+        *)
+            exit 0
+        ;;
+    esac
+
+}
+
+[[ "${BASH_SOURCE[0]}" == "${0}" ]] && main "$@"

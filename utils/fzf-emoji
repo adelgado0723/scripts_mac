@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+show_notification=1
+print_emoji=1
+
+emoji=$(/usr/lib/emojiget.py | fzf | tr '\n' ' ' | awk '{print $1}')
+
+if [ ! -z "$emoji" ]
+then
+
+    # copy to clipboard
+    echo -n "$emoji" | xclip -rmlastnl -selection clipboard
+    echo "Copied $emoji to clipboard"
+
+    if [[ "$show_notification" -eq 1 ]]; then
+        notify-send --urgency=low "$emoji"
+    fi
+
+    if [[ "$print_emoji" -eq 1 ]]; then
+        echo "$emoji"
+    fi
+
+fi
+

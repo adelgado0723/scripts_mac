@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+GIT_COLOR="#ff5555"
+git_color_text() {
+  text=$1
+  gum style --foreground "$GIT_COLOR" "$text"
+
+}
+
+getBranches() {
+  if [ ${1+x} ]; then
+    git branch --format="%(refname:short)" | gum filter --limit "$1"
+  else
+    git branch --format="%(refname:short)" | gum filter --no-limit
+  fi
+}
+
+gum style \
+  --border normal \
+  --margin "1" \
+  --padding "1" \
+  --border-foreground "$GIT_COLOR" \
+  "$(git_color_text ' Git:') Branch Manager"
+
+echo "Choose $(git_color_text "branches") to operate on:"
+branches=$(getBranches)
+echo "Selected: $(git_color_text $branches)"
+
+echo ""
+echo "Choose a $(git_color_text "command"):"
+command=$(gum choose update rebase delete)
+echo "Performing $(git_color_text $command operation)"
+echo ""
+
+echo $branches | tr " " "\n" |while read branch
+do
+  case $command in
+    rebase)
+      base_branch=$(getBranches 1) \
+        && echo "Base branch: $(git_color_text $base_branch)" \
+        && git fetch origin \
+        && git checkout "$branch" \
+        && git rebase "origin/$base_branch" \
+        && echo "Rebased $(git_color_text $branch) onto $(git_color_text $base_branch)"
+      ;;
+
+    delete)
+      git branch -D "$branch" \
+      && echo "Deleted $(git_color_text $branch)"
+      ;;
+
+    update)
+      git checkout "$branch" \
+      && git pull \
+      && echo "Updated $(git_color_text $branch)"
+      ;;
+  esac
+done

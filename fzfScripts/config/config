@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC2034
+# This issue is ignored because it is part of a larger file that calls upon all variables listed
+
+# To edit this file copy it to `${HOME}/.config/dmscripts/config`
+# `cp /etc/dmscripts/config ${HOME}/.config/dmscripts/config`
+
+# Defined variables, modify anything in quotes to your prefered software
+
+# -p is needed as we use prompts, alternative programs have to handle prompts well.
+
+OS=MacOSX
+
+FZF="fzf --height=40 --border=sharp -i --layout=reverse-list --prompt="
+
+FZFROWSER="brave-browser"
+# DMBROWSER="qutebrowser"
+
+TERM='dumb'
+DISPLAY=':1'
+
+# DMTERM="st -e"
+FZFTERM="alacritty --command zsh -l -c"
+
+FZFEDITOR="${FZFTERM} nvim"
+
+# include -p in standard dmenu as we use prompts by default
+case "${0##*-}" in
+#  "colpick") DMENU="dmenu -i -p";;
+#  "confedit") DMENU="dmenu -i -l 30 -p";;
+#  "youtube") DMBROWSER="firefox";;
+  *);;
+esac
+
+# dm-bookman 
+bookman_show_source=1
+
+# dm-sounds
+sounds_dir="${HOME}/.config/dmscripts/dmsounds"
+
+# dm-setbg
+setbg_dir="${HOME}/home/adelg/wallpapers/"
+# Set this to 1 if you want to use imv and wayland, 0 if you want to use sxiv
+# Note that sxiv is X11 only, you need to mark the image you want to use.
+use_imv=0 
+
+# dm-maim
+maim_dir="${HOME}/Screenshots"
+maim_file_prefix="maim"
+
+# dm-note
+note_dir="${HOME}/.config/dmenu/dmscripts/notes"
+
+translate_service="libre"
+# translate_service="lingva"
+libretranslate_instance="https://libretranslate.de"
+lingva_instance="https://lingva.ml"
+
+
+_revision=22
