@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+
+LOG_FILE="$HOME/.chatgpt-tmux-log.md"
+CURSOR_LINE=$1
+
+if [[ -z "$CURSOR_LINE" ]]; then
+  echo "Usage: $0 <line number from cursor>"
+  exit 1
+fi
+
+# Extract the block above the cursor
+block=$(awk -v line="$CURSOR_LINE" '
+  NR <= line {
+    if ($0 ~ /^## 🧠 Question @ /) {
+      start = NR
+    }
+  }
+  END {
+    if (start) print start
+  }
+' "$LOG_FILE")
+
+if [[ -z "$block" ]]; then
+  echo "❌ Could not find a previous question block."
+  exit 1
+fi
+
+# Extract the original question block
+original_block=$(awk -v start="$block" -v line="$CURSOR_LINE" '
+  NR >= start && (NR > start || /^## 🧠 Question @ /) {
+    if (NR != start && /^## /) exit
+    print
+  }
+' "$LOG_FILE")
+
+# Get original timestamp
+original_timestamp=$(echo "$original_block" | grep '^## 🧠 Question @ ' | cut -d'@' -f2- | xargs)
+
+# Extract question
+original_question=$(echo "$original_block" | awk '/^## 🧠 Question @ / {found=1; next} /^### 💬 Response/ {exit} found')
+original_response=$(echo "$original_block" | awk '/^### 💬 Response/ {found=1; next} found')
+
+# Prompt for new query
+new_query=$(gum write --placeholder "Enter a new query to follow up on the previous one..." --width 80 --height 10)
+
+if [[ -z "$new_query" ]]; then
+  echo "No new query entered. Exiting..."
+  exit 0
+fi
+
+# Build JSON for GPT
+json_file=$(mktemp)
+
+jq -n --arg q1 "$original_question" \
+      --arg a1 "$original_response" \
+      --arg q2 "$new_query" \
+      '{
+        model: "gpt-4o",
+        temperature: 0.7,
+        messages: [
+          {role: "system", content: "You are a helpful technical assistant."},
+          {role: "user", content: $q1},
+          {role: "assistant", content: $a1},
+          {role: "user", content: $q2}
+        ]
+      }' > "$json_file"
+
+# Call OpenAI API
+response=$(curl -sS https://api.openai.com/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  --data @"$json_file")
+
+rm -f "$json_file"
+
+# Parse response
+if ! echo "$response" | jq -e .choices[0].message.content > /dev/null 2>&1; then
+  echo "❌ Failed to get a valid response from OpenAI."
+  echo "$response" | jq .
+  exit 1
+fi
+
+content=$(echo "$response" | jq -r '.choices[0].message.content')
+
+# Append to log
+{
+  echo "## 🔁 Requery @ $(date -Is) (based on $original_timestamp)"
+  echo ""
+  echo "$new_query"
+  echo ""
+  echo "### 💬 Response"
+  echo ""
+  echo "$content"
+  echo ""
+  echo "---"
+  echo ""
+} >> "$LOG_FILE"
+
+# Preview the response in Neovim
+tmpfile=$(mktemp /tmp/chatgpt_response.XXXXXX.md)
+echo "$content" > "$tmpfile"
+nvim +"set ft=markdown" +"setlocal readonly" +"normal! gg" "$tmpfile"

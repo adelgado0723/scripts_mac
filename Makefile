@@ -1,6 +1,5 @@
 # VARIABLES
 SHELL = /bin/sh
-NAME = dmscripts
 
 PREFIX ?= /usr/local
 SCRIPTS := $(wildcard ./utils/* ./fileManager ./i3lock-color/lock)
